@@ -6,6 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib import colors as mcolors
 from matplotlib.lines import Line2D
 
 
@@ -30,8 +31,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=Path("output/trust_score_volcano_style.png"))
     parser.add_argument("--theta0", type=float, default=0.0, help="Lower trust threshold")
     parser.add_argument("--thetaT", type=float, default=1.0, help="Upper trust threshold")
-    parser.add_argument("--point-size", type=float, default=20.0)
-    parser.add_argument("--alpha", type=float, default=0.82)
+    parser.add_argument("--point-size", type=float, default=60.0)
+    parser.add_argument("--alpha", type=float, default=0.6)
     parser.add_argument("--jitter", type=float, default=0.33)
     parser.add_argument("--bg-alpha", type=float, default=0.05)
     parser.add_argument("--title", type=str, default="Trust Score Distribution by Group")
@@ -50,6 +51,11 @@ def _validate_columns(df: pd.DataFrame) -> None:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
 
 
+def _darken_color(color: str, factor: float = 0.65) -> tuple[float, float, float]:
+    r, g, b = mcolors.to_rgb(color)
+    return (r * factor, g * factor, b * factor)
+
+
 def _make_legend(fig: plt.Figure, show_thresholds: bool) -> None:
     handles: list[Line2D] = []
     for g in GROUP_ORDER:
@@ -60,8 +66,8 @@ def _make_legend(fig: plt.Figure, show_thresholds: bool) -> None:
                 marker=GROUP_MARKERS[g],
                 color="none",
                 markerfacecolor=GROUP_COLORS[g],
-                markeredgecolor="#1f1f1f",
-                markeredgewidth=0.8,
+                markeredgecolor=_darken_color(GROUP_COLORS[g]),
+                markeredgewidth=0.9,
                 linestyle="None",
                 markersize=8,
                 label=g,
@@ -133,8 +139,8 @@ def draw_plot(
             s=point_size,
             c=GROUP_COLORS[g],
             marker=GROUP_MARKERS[g],
-            edgecolors="#242424",
-            linewidths=0.6,
+            edgecolors=[_darken_color(GROUP_COLORS[g])],
+            linewidths=0.9,
             alpha=alpha,
             zorder=3,
         )
