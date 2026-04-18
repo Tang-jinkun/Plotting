@@ -9,6 +9,8 @@ import pandas as pd
 from matplotlib import colors as mcolors
 from matplotlib.lines import Line2D
 
+plt.rcParams["font.family"] = "Times New Roman"
+
 
 GROUP_ORDER = ["Train Legit", "Test Legit", "Attacker 1", "Attacker 2"]
 GROUP_COLORS = {
@@ -93,6 +95,7 @@ def _make_legend(fig: plt.Figure, show_thresholds: bool) -> None:
         fancybox=False,
         edgecolor="#555555",
         fontsize=10,
+        prop={"family": "Times New Roman"},
     )
 
 
@@ -176,6 +179,7 @@ def draw_plot(
                 color="#1f5f1f",
                 fontweight="bold",
                 zorder=5,
+                fontfamily="Times New Roman",
             )
             ax.text(
                 x_center,
@@ -187,6 +191,7 @@ def draw_plot(
                 color="#5e1f3a",
                 fontweight="bold",
                 zorder=5,
+                fontfamily="Times New Roman",
             )
 
         ax.text(
@@ -199,14 +204,15 @@ def draw_plot(
             fontsize=11,
             fontweight="bold",
             color="#2a2a2a",
+            fontfamily="Times New Roman",
         )
 
     if show_thresholds:
         ax.axhline(theta0, color="#b51e3f", linestyle=(0, (4, 3)), linewidth=1.8, zorder=2)
         ax.axhline(thetaT, color="#57bf23", linestyle=(0, (4, 3)), linewidth=1.8, zorder=2)
         x_annot = x_max + 0.35 * x_pad
-        ax.text(x_annot, theta0 + 0.03, r"$\theta_0$", color="#b51e3f", fontsize=12, va="bottom", ha="left")
-        ax.text(x_annot, thetaT + 0.03, r"$\theta_T$", color="#57bf23", fontsize=12, va="bottom", ha="left")
+        ax.text(x_annot, theta0 + 0.03, r"$\theta_0$", color="#b51e3f", fontsize=12, va="bottom", ha="left", fontfamily="Times New Roman")
+        ax.text(x_annot, thetaT + 0.03, r"$\theta_T$", color="#57bf23", fontsize=12, va="bottom", ha="left", fontfamily="Times New Roman")
 
     xticks: list[float] = []
     xlabels: list[str] = []
@@ -222,9 +228,9 @@ def draw_plot(
         boundary = group_offsets[GROUP_ORDER[i]] + TIME_MAX + 0.5 * GROUP_GAP
         ax.axvline(boundary, color="#666666", linestyle=(0, (3, 3)), linewidth=0.9, alpha=0.7, zorder=1)
 
-    ax.set_xlabel("Sample Time", fontsize=13)
-    ax.set_ylabel("Trust Score", fontsize=14)
-    fig.suptitle(title, fontsize=16, y=0.975)
+    ax.set_xlabel("Sample Time", fontsize=13, fontfamily="Times New Roman")
+    ax.set_ylabel("Trust Score", fontsize=14, fontfamily="Times New Roman")
+    fig.suptitle(title, fontsize=16, y=0.975, fontfamily="Times New Roman")
     fig.text(
         0.5,
         0.94,
@@ -232,6 +238,7 @@ def draw_plot(
         ha="center",
         va="center",
         fontsize=12,
+        fontfamily="Times New Roman",
     )
 
     ax.spines["top"].set_visible(False)
@@ -239,6 +246,8 @@ def draw_plot(
     ax.spines["left"].set_linewidth(1.2)
     ax.spines["bottom"].set_linewidth(1.2)
     ax.tick_params(axis="both", labelsize=11, width=1.0, length=5)
+    for label in ax.get_xticklabels() + ax.get_yticklabels():
+        label.set_fontfamily("Times New Roman")
     ax.grid(axis="y", alpha=0.15)
 
     _make_legend(fig, show_thresholds=show_thresholds)

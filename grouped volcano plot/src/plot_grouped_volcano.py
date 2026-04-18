@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
 
+plt.rcParams["font.family"] = "Times New Roman"
+
 
 GROUP_ORDER = ["group1", "group2", "group3", "group4", "group5", "group6"]
 GROUP_COLORS = {
@@ -110,6 +112,7 @@ def draw_plot(
             fontweight="bold",
             color="#1b2a34" if group != "group4" else "#3143aa",
             zorder=5,
+            fontfamily="Times New Roman",
         )
 
     for i, group in enumerate(GROUP_ORDER, start=1):
@@ -146,6 +149,7 @@ def draw_plot(
             ha="center",
             va="center",
             zorder=6,
+            fontfamily="Times New Roman",
         )
         ax.text(
             i,
@@ -157,6 +161,7 @@ def draw_plot(
             ha="center",
             va="center",
             zorder=6,
+            fontfamily="Times New Roman",
         )
 
         labels = _pick_labels(dg, fc_threshold, padj_threshold, labels_per_side)
@@ -176,6 +181,7 @@ def draw_plot(
                     "alpha": 0.95,
                 },
                 zorder=7,
+                fontfamily="Times New Roman",
             )
 
     legend_values = [0, 2, 4]
@@ -194,18 +200,21 @@ def draw_plot(
         borderaxespad=0.0,
         fontsize=11,
         title_fontsize=14,
+        prop={"family": "Times New Roman"},
     )
 
     ax.set_xlim(0.4, len(GROUP_ORDER) + 0.6)
     ax.set_xticks([])
     ax.set_yticks(np.arange(-8, 9, 4))
-    ax.set_ylabel(r"$\log_2(\mathrm{fold\ change})$", fontsize=16)
+    ax.set_ylabel(r"$\log_2(\mathrm{fold\ change})$", fontsize=16, fontfamily="Times New Roman")
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     ax.spines["left"].set_linewidth(1.4)
     ax.tick_params(axis="y", labelsize=12, width=1.2, length=6)
+    for label in ax.get_yticklabels():
+        label.set_fontfamily("Times New Roman")
 
     plt.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
