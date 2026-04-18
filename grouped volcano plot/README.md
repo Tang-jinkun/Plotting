@@ -51,9 +51,10 @@ Optional parameters:
 
 This mode maps information as:
 
-- X axis: category (`Train Legit`, `Test Legit`, `Attacker 1`, `Attacker 2`)
+- X axis: grouped time windows (each group has its own `sample_time` range 0-300)
 - Y axis: `trust_score`
 - Point size: fixed (`s=20` by default)
+- No x-axis jitter is applied (points stay at original sampled times)
 - Optional horizontal threshold lines: `theta0`, `thetaT`
 
 ### Data format (decoupled)
@@ -61,17 +62,37 @@ This mode maps information as:
 Required columns:
 
 - `group`
+- `sample_time`
 - `trust_score`
 
 Optional column:
 
 - `sample_id`
 
+Real source mapping used for your data:
+
+- `Train Legit` -> `theta_train_sampled.mat`
+- `Test Legit` -> `theta_pool_legal`
+- `Attacker 1` -> `theta_pool_attack.mat`
+- `Attacker 2` -> keep the existing placeholder behavior unchanged for now
+
+The first three groups are treated as 300 sampled points over `0` to `300`.
+
 ### Generate demo trust-score data
 
 ```powershell
 python src/generate_trust_score_data.py --output data/trust_score_data.csv --seed 42
 ```
+
+### Generate trust-score data from real MAT files
+
+Put `theta_train_sampled.mat`, `theta_pool_legal.mat`, and `theta_pool_attack.mat` in one folder, then run:
+
+```powershell
+python src/generate_trust_score_data.py --mode real --mat-dir data --output data/trust_score_data.csv
+```
+
+The loader expects one numeric vector per file with exactly 300 samples. `Attacker 2` still uses the existing placeholder series because you said that data is not available yet.
 
 ### Draw trust-score volcano-style plot
 

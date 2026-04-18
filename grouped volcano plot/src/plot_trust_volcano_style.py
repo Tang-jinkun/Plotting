@@ -23,6 +23,9 @@ GROUP_MARKERS = {
     "Attacker 1": "^",
     "Attacker 2": "s",
 }
+TIME_MIN = 0.0
+TIME_MAX = 300.0
+GROUP_GAP = 35.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -33,9 +36,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--thetaT", type=float, default=1.0, help="Upper trust threshold")
     parser.add_argument("--point-size", type=float, default=60.0)
     parser.add_argument("--alpha", type=float, default=0.6)
-    parser.add_argument("--jitter", type=float, default=0.33)
     parser.add_argument("--bg-alpha", type=float, default=0.05)
-    parser.add_argument("--title", type=str, default="Trust Score Distribution by Group")
+    parser.add_argument("--title", type=str, default="Trust Score Over Time by Group")
     parser.add_argument("--show-thresholds", action="store_true", default=True)
     parser.add_argument("--hide-thresholds", action="store_true")
     parser.add_argument("--show-counts", action="store_true", default=True)
@@ -45,7 +47,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def _validate_columns(df: pd.DataFrame) -> None:
-    required = {"group", "trust_score"}
+    required = {"group", "trust_score", "sample_time"}
     missing = required.difference(df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
@@ -101,7 +103,6 @@ def draw_plot(
     thetaT: float,
     point_size: float,
     alpha: float,
-    jitter: float,
     bg_alpha: float,
     title: str,
     show_thresholds: bool,
@@ -109,9 +110,8 @@ def draw_plot(
     dpi: int,
 ) -> None:
     fig, ax = plt.subplots(figsize=(10.5, 7.0))
-
-    x_map = {g: i + 1 for i, g in enumerate(GROUP_ORDER)}
-    rng = np.random.default_rng(2026)
+    time_span = TIME_MAX - TIME_MIN
+    group_offsets = {g: i * (time_span + GROUP_GAP) for i, g in enumerate(GROUP_ORDER)}
 
     y_min_data = float(df["trust_score"].min())
     y_max_data = float(df["trust_score"].max())
@@ -121,20 +121,26 @@ def draw_plot(
     y_max = y_max_data + y_pad
     ax.set_ylim(y_min, y_max)
 
-    high_y = y_max - 0.45
-    low_y = y_min + 0.45
+    x_min = group_offsets[GROUP_ORDER[0]] + TIME_MIN
+    x_max = group_offsets[GROUP_ORDER[-1]] + TIME_MAX
+    x_pad = max(time_span * 0.03, 6.0)
+    ax.set_xlim(x_min - x_pad, x_max + x_pad)
 
-    for g in GROUP_ORDER:
-        x = x_map[g]
-        ax.axvspan(x - 0.45, x + 0.45, color="#8f8f8f", alpha=bg_alpha, zorder=0)
+    high_y = y_max - 0.07 * max(y_max - y_min, 1.0)
+    low_y = y_min + 0.07 * max(y_max - y_min, 1.0)
 
     for g in GROUP_ORDER:
         dg = df[df["group"] == g].copy()
         if dg.empty:
             continue
-        xs = x_map[g] + rng.uniform(-jitter, jitter, len(dg))
+        x0 = group_offsets[g] + TIME_MIN
+        x1 = group_offsets[g] + TIME_MAX
+        ax.axvspan(x0, x1, color="#8f8f8f", alpha=bg_alpha, zorder=0)
+
+        dg = dg.sort_values("sample_time", kind="stable")
+        x_values = group_offsets[g] + np.clip(dg["sample_time"].to_numpy(dtype=float), TIME_MIN, TIME_MAX)
         ax.scatter(
-            xs,
+            x_values,
             dg["trust_score"],
             s=point_size,
             c=GROUP_COLORS[g],
@@ -145,11 +151,23 @@ def draw_plot(
             zorder=3,
         )
 
+        # Keep the data faithful while still showing trend continuity over time.
+        ax.plot(
+            x_values,
+            dg["trust_score"],
+            color=GROUP_COLORS[g],
+            linewidth=0.7,
+            linestyle=(0, (3, 3)),
+            alpha=0.9,
+            zorder=2,
+        )
+
         if show_counts:
             high = int((dg["trust_score"] > thetaT).sum())
             low = int((dg["trust_score"] < theta0).sum())
+            x_center = group_offsets[g] + 0.5 * (TIME_MIN + TIME_MAX)
             ax.text(
-                x_map[g],
+                x_center,
                 high_y,
                 f"High: {high}",
                 ha="center",
@@ -160,7 +178,7 @@ def draw_plot(
                 zorder=5,
             )
             ax.text(
-                x_map[g],
+                x_center,
                 low_y,
                 f"Low: {low}",
                 ha="center",
@@ -171,25 +189,49 @@ def draw_plot(
                 zorder=5,
             )
 
+        ax.text(
+            group_offsets[g] + 0.5 * (TIME_MIN + TIME_MAX),
+            1.01,
+            g,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=11,
+            fontweight="bold",
+            color="#2a2a2a",
+        )
+
     if show_thresholds:
         ax.axhline(theta0, color="#b51e3f", linestyle=(0, (4, 3)), linewidth=1.8, zorder=2)
         ax.axhline(thetaT, color="#57bf23", linestyle=(0, (4, 3)), linewidth=1.8, zorder=2)
-        ax.text(4.49, theta0 + 0.03, r"$\theta_0$", color="#b51e3f", fontsize=12, va="bottom", ha="left")
-        ax.text(4.49, thetaT + 0.03, r"$\theta_T$", color="#57bf23", fontsize=12, va="bottom", ha="left")
+        x_annot = x_max + 0.35 * x_pad
+        ax.text(x_annot, theta0 + 0.03, r"$\theta_0$", color="#b51e3f", fontsize=12, va="bottom", ha="left")
+        ax.text(x_annot, thetaT + 0.03, r"$\theta_T$", color="#57bf23", fontsize=12, va="bottom", ha="left")
 
-    ax.set_xlim(0.5, len(GROUP_ORDER) + 0.62)
-    ax.set_xticks([x_map[g] for g in GROUP_ORDER])
-    ax.set_xticklabels(GROUP_ORDER, fontsize=12)
-    ax.set_xlabel("Group", fontsize=13)
+    xticks: list[float] = []
+    xlabels: list[str] = []
+    for g in GROUP_ORDER:
+        for t in (0, 100, 200, 300):
+            xticks.append(group_offsets[g] + t)
+            xlabels.append(str(t))
+
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xlabels)
+
+    for i in range(len(GROUP_ORDER) - 1):
+        boundary = group_offsets[GROUP_ORDER[i]] + TIME_MAX + 0.5 * GROUP_GAP
+        ax.axvline(boundary, color="#666666", linestyle=(0, (3, 3)), linewidth=0.9, alpha=0.7, zorder=1)
+
+    ax.set_xlabel("Sample Time", fontsize=13)
     ax.set_ylabel("Trust Score", fontsize=14)
     fig.suptitle(title, fontsize=16, y=0.975)
     fig.text(
         0.5,
         0.94,
-        r"High: score > $\theta_T$, Low: score < $\theta_0$",
+        r"Grouped view: each group uses its own 0-300 time range; High: score > $\theta_T$, Low: score < $\theta_0$",
         ha="center",
         va="center",
-        fontsize=13,
+        fontsize=12,
     )
 
     ax.spines["top"].set_visible(False)
@@ -225,7 +267,6 @@ def main() -> None:
         thetaT=args.thetaT,
         point_size=args.point_size,
         alpha=args.alpha,
-        jitter=args.jitter,
         bg_alpha=args.bg_alpha,
         title=args.title,
         show_thresholds=show_thresholds,
